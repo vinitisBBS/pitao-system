@@ -1,0 +1,144 @@
+{% extends 'base.html' %}
+{% block title %}Usuários{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>👥 Usuários</h1>
+  <button class="btn btn-gold" onclick="openModal('modal-criar-user')">+ Novo Usuário</button>
+</div>
+
+<div class="card">
+  <div class="card-title">Membros Cadastrados</div>
+  <div style="overflow-x:auto;">
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>Nome</th>
+          <th>Login</th>
+          <th>Cargo</th>
+          <th>Status</th>
+          <th>Cadastro</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in usuarios %}
+        <tr>
+          <td style="font-family:'Oswald',sans-serif;">{{ u.nome }}</td>
+          <td style="color:rgba(240,221,176,0.6);font-size:0.85rem;">{{ u.login }}</td>
+          <td>
+            {% if u.cargo %}
+            <span class="badge" style="background:rgba(0,0,0,0.3);border:1px solid {{ u.cargo.cor }};color:{{ u.cargo.cor }};">
+              {{ u.cargo.nome }}
+            </span>
+            {% else %}
+            <span style="color:rgba(240,221,176,0.3);font-size:0.8rem;">—</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if u.ativo %}
+            <span class="badge" style="background:rgba(57,217,107,0.12);border:1px solid var(--green);color:var(--green);">Ativo</span>
+            {% else %}
+            <span class="badge" style="background:rgba(224,60,60,0.12);border:1px solid var(--red);color:var(--red);">Inativo</span>
+            {% endif %}
+          </td>
+          <td style="color:rgba(240,221,176,0.4);font-size:0.8rem;">{{ u.criado_em.strftime('%d/%m/%Y') }}</td>
+          <td>
+            <div style="display:flex;gap:6px;">
+              {% if u.id != current_user.id %}
+              <button class="btn btn-ghost btn-sm" onclick="openEditUser({{ u.id }}, '{{ u.nome }}', '{{ u.login }}', {{ u.cargo_id or 'null' }})">✏️</button>
+              <form method="POST" action="{{ url_for('toggle_usuario', uid=u.id) }}" style="margin:0;">
+                <button class="btn btn-sm {{ 'btn-red' if u.ativo else 'btn-green' }}" type="submit">
+                  {{ '🔒' if u.ativo else '🔓' }}
+                </button>
+              </form>
+              {% else %}
+              <span style="color:rgba(240,221,176,0.3);font-size:0.75rem;">Você</span>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- MODAL CRIAR -->
+<div class="modal-overlay" id="modal-criar-user">
+  <div class="modal">
+    <div class="modal-title">👤 Novo Usuário</div>
+    <form method="POST" action="{{ url_for('criar_usuario') }}">
+      <div class="form-row">
+        <label>Nome *</label>
+        <input type="text" name="nome" placeholder="Nome do membro" required/>
+      </div>
+      <div class="form-row">
+        <label>Login *</label>
+        <input type="text" name="login" placeholder="login único" required autocomplete="off"/>
+      </div>
+      <div class="form-row">
+        <label>Senha *</label>
+        <input type="password" name="senha" placeholder="senha" required autocomplete="new-password"/>
+      </div>
+      <div class="form-row">
+        <label>Cargo</label>
+        <select name="cargo_id">
+          <option value="">— Sem cargo —</option>
+          {% for c in cargos %}
+          <option value="{{ c.id }}">{{ c.nome }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:8px;">
+        <button type="submit" class="btn btn-gold">✓ Criar</button>
+        <button type="button" class="btn btn-ghost" onclick="closeModal('modal-criar-user')">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL EDITAR -->
+<div class="modal-overlay" id="modal-editar-user">
+  <div class="modal">
+    <div class="modal-title">✏️ Editar Usuário</div>
+    <form method="POST" id="form-editar-user" action="">
+      <div class="form-row">
+        <label>Nome</label>
+        <input type="text" name="nome" id="edit-nome" required/>
+      </div>
+      <div class="form-row">
+        <label>Nova Senha <span style="color:rgba(240,221,176,0.4)">— deixe em branco para não alterar</span></label>
+        <input type="password" name="senha" placeholder="nova senha (opcional)" autocomplete="new-password"/>
+      </div>
+      <div class="form-row">
+        <label>Cargo</label>
+        <select name="cargo_id" id="edit-cargo">
+          <option value="">— Sem cargo —</option>
+          {% for c in cargos %}
+          <option value="{{ c.id }}">{{ c.nome }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:8px;">
+        <button type="submit" class="btn btn-gold">💾 Salvar</button>
+        <button type="button" class="btn btn-ghost" onclick="closeModal('modal-editar-user')">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function openEditUser(id, nome, login, cargoId) {
+  document.getElementById('edit-nome').value = nome;
+  document.getElementById('form-editar-user').action = '/usuario/' + id + '/editar';
+  const sel = document.getElementById('edit-cargo');
+  for (let opt of sel.options) {
+    opt.selected = (opt.value == cargoId);
+  }
+  openModal('modal-editar-user');
+}
+</script>
+{% endblock %}
