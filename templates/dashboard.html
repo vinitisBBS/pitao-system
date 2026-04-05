@@ -1,0 +1,146 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>⚙ Dashboard</h1>
+  {% if current_user.cargo and current_user.cargo.nivel == 100 %}
+  <button class="btn btn-gold" onclick="openModal('modal-status')">✏️ Editar Status</button>
+  {% endif %}
+</div>
+
+<!-- CREDENCIAIS DO USUÁRIO -->
+<div class="card" style="margin-bottom:20px;">
+  <div class="card-title">👤 Suas Credenciais</div>
+  <div class="grid-2">
+    <div class="stat-box">
+      <div class="stat-val">{{ current_user.nome }}</div>
+      <div class="stat-label">Nome</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-val" style="color: {{ current_user.cargo.cor if current_user.cargo else '#888' }}">
+        {{ current_user.cargo.nome if current_user.cargo else '—' }}
+      </div>
+      <div class="stat-label">Cargo</div>
+    </div>
+  </div>
+
+  <!-- Permissões do usuário -->
+  <div style="margin-top:16px;">
+    <div style="font-family:'Oswald',sans-serif;font-size:0.7rem;letter-spacing:2px;text-transform:uppercase;color:var(--gold2);margin-bottom:10px;">Suas Permissões</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;">
+      {% if current_user.cargo %}
+        {% if current_user.cargo.pode_ver_dashboard %}
+        <span class="badge" style="background:rgba(57,217,107,0.15);border:1px solid var(--green);color:var(--green);">✓ Ver Dashboard</span>
+        {% endif %}
+        {% if current_user.cargo.pode_ver_metas %}
+        <span class="badge" style="background:rgba(57,217,107,0.15);border:1px solid var(--green);color:var(--green);">✓ Ver Metas</span>
+        {% endif %}
+        {% if current_user.cargo.pode_adicionar_valor %}
+        <span class="badge" style="background:rgba(57,217,107,0.15);border:1px solid var(--green);color:var(--green);">✓ Adicionar Valor</span>
+        {% endif %}
+        {% if current_user.cargo.pode_gerenciar_users %}
+        <span class="badge" style="background:rgba(245,197,24,0.15);border:1px solid var(--gold2);color:var(--gold2);">★ Gerenciar Usuários</span>
+        {% endif %}
+        {% if current_user.cargo.pode_gerenciar_metas %}
+        <span class="badge" style="background:rgba(245,197,24,0.15);border:1px solid var(--gold2);color:var(--gold2);">★ Gerenciar Metas</span>
+        {% endif %}
+        {% if current_user.cargo.pode_gerenciar_cargos %}
+        <span class="badge" style="background:rgba(245,197,24,0.15);border:1px solid var(--gold2);color:var(--gold2);">★ Gerenciar Cargos</span>
+        {% endif %}
+      {% else %}
+        <span style="color:rgba(240,221,176,0.4);font-size:0.85rem;">Sem cargo atribuído.</span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- STATUS DA PISTÃO -->
+<div class="card" style="margin-bottom:20px;">
+  <div class="card-title">🔧 Status da PISTÃO</div>
+  <div class="grid-3" style="margin-bottom:16px;">
+    <div class="stat-box">
+      <div class="stat-val">{{ total_membros }}</div>
+      <div class="stat-label">Membros Ativos</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-val" style="color:var(--green);">{{ metas_data|length }}</div>
+      <div class="stat-label">Metas Abertas</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-val" style="color:var(--gold);font-size:1.1rem;">
+        {{ status.get('saldo_caixa','—') or '—' }}
+      </div>
+      <div class="stat-label">Saldo Caixa</div>
+    </div>
+  </div>
+
+  {% if status.get('status_geral') %}
+  <div style="background:var(--darker);border-radius:8px;padding:14px;margin-bottom:12px;border-left:3px solid var(--gold);">
+    <div style="font-family:'Oswald',sans-serif;font-size:0.7rem;letter-spacing:2px;text-transform:uppercase;color:var(--gold2);margin-bottom:6px;">Status Geral</div>
+    <div style="font-size:0.95rem;">{{ status.get('status_geral') }}</div>
+  </div>
+  {% endif %}
+
+  {% if status.get('avisos') %}
+  <div style="background:rgba(224,60,60,0.08);border-radius:8px;padding:14px;border-left:3px solid var(--red);">
+    <div style="font-family:'Oswald',sans-serif;font-size:0.7rem;letter-spacing:2px;text-transform:uppercase;color:var(--red);margin-bottom:6px;">⚠ Avisos</div>
+    <div style="font-size:0.95rem;">{{ status.get('avisos') }}</div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- RESUMO METAS -->
+{% if metas_data %}
+<div class="card">
+  <div class="card-title">🎯 Metas em Andamento</div>
+  {% for item in metas_data %}
+  <div style="margin-bottom:20px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+      <div style="font-family:'Oswald',sans-serif;font-size:1rem;">{{ item.meta.titulo }}</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:var(--gold);">
+        ${{ "{:,.0f}".format(item.total) }}
+        {% if item.meta.valor_alvo > 0 %}
+        <span style="color:rgba(240,221,176,0.4);font-size:0.85rem;">/ ${{ "{:,.0f}".format(item.meta.valor_alvo) }}</span>
+        {% endif %}
+      </div>
+    </div>
+    {% if item.meta.valor_alvo > 0 %}
+    <div class="prog-wrap">
+      <div class="prog-bar" style="width:{{ item.progresso }}%"></div>
+    </div>
+    <div style="text-align:right;font-size:0.75rem;color:var(--gold2);margin-top:4px;">{{ "%.1f"|format(item.progresso) }}%</div>
+    {% endif %}
+  </div>
+  {% if not loop.last %}<div class="divider" style="margin:12px 0"></div>{% endif %}
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- MODAL EDITAR STATUS (só dono) -->
+{% if current_user.cargo and current_user.cargo.nivel == 100 %}
+<div class="modal-overlay" id="modal-status">
+  <div class="modal">
+    <div class="modal-title">✏️ Editar Status da PISTÃO</div>
+    <form method="POST" action="{{ url_for('editar_status') }}">
+      <div class="form-row">
+        <label>Status Geral</label>
+        <textarea name="status_geral" placeholder="Ex: Operações normais, todos os setores ativos...">{{ status.get('status_geral','') }}</textarea>
+      </div>
+      <div class="form-row">
+        <label>Avisos / Alertas</label>
+        <textarea name="avisos" placeholder="Ex: Reunião hoje às 20h...">{{ status.get('avisos','') }}</textarea>
+      </div>
+      <div class="form-row">
+        <label>Saldo do Caixa</label>
+        <input type="text" name="saldo_caixa" placeholder="Ex: $1.250.000" value="{{ status.get('saldo_caixa','') }}"/>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:8px;">
+        <button type="submit" class="btn btn-gold">💾 Salvar</button>
+        <button type="button" class="btn btn-ghost" onclick="closeModal('modal-status')">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
