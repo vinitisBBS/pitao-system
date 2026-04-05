@@ -1,0 +1,148 @@
+{% extends 'base.html' %}
+{% block title %}Metas{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>🎯 Metas</h1>
+  {% if current_user.cargo and current_user.cargo.pode_gerenciar_metas %}
+  <button class="btn btn-gold" onclick="openModal('modal-criar-meta')">+ Nova Meta</button>
+  {% endif %}
+</div>
+
+{% if not metas %}
+<div class="card" style="text-align:center;padding:40px;">
+  <div style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--brown2);letter-spacing:3px;">Nenhuma meta cadastrada</div>
+  <div style="margin-top:8px;color:rgba(240,221,176,0.4);font-size:0.9rem;">O Dono ou Gerente pode criar novas metas.</div>
+</div>
+{% endif %}
+
+{% for meta in metas %}
+<div class="card" style="margin-bottom:16px;">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;">
+    <div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:var(--gold);letter-spacing:2px;">
+        {{ meta.titulo }}
+        {% if meta.aberta %}
+        <span class="badge" style="background:rgba(57,217,107,0.15);border:1px solid var(--green);color:var(--green);font-size:0.6rem;margin-left:8px;">ABERTA</span>
+        {% else %}
+        <span class="badge" style="background:rgba(224,60,60,0.1);border:1px solid var(--red);color:var(--red);font-size:0.6rem;margin-left:8px;">FECHADA</span>
+        {% endif %}
+      </div>
+      {% if meta.descricao %}
+      <div style="color:rgba(240,221,176,0.55);font-size:0.88rem;margin-top:4px;">{{ meta.descricao }}</div>
+      {% endif %}
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      {% if current_user.cargo and current_user.cargo.pode_gerenciar_metas %}
+        {% if meta.aberta %}
+        <form method="POST" action="{{ url_for('fechar_meta', meta_id=meta.id) }}">
+          <button class="btn btn-ghost btn-sm" type="submit">🔒 Fechar</button>
+        </form>
+        {% else %}
+        <form method="POST" action="{{ url_for('abrir_meta', meta_id=meta.id) }}">
+          <button class="btn btn-green btn-sm" type="submit">🔓 Reabrir</button>
+        </form>
+        {% endif %}
+        <form method="POST" action="{{ url_for('deletar_meta', meta_id=meta.id) }}"
+          onsubmit="return confirm('Deletar esta meta? Todos os valores serão apagados.')">
+          <button class="btn btn-red btn-sm" type="submit">🗑</button>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Progresso -->
+  {% set total = meta.valores|sum(attribute='valor') %}
+  {% if meta.valor_alvo > 0 %}
+  {% set pct = [total / meta.valor_alvo * 100, 100]|min %}
+  <div style="margin:14px 0 6px;">
+    <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
+      <span style="font-family:'Oswald',sans-serif;font-size:0.7rem;letter-spacing:2px;text-transform:uppercase;color:var(--gold2);">Progresso</span>
+      <span style="font-family:'Bebas Neue',sans-serif;color:var(--gold);font-size:1rem;">
+        ${{ "{:,.0f}".format(total) }} / ${{ "{:,.0f}".format(meta.valor_alvo) }}
+      </span>
+    </div>
+    <div class="prog-wrap">
+      <div class="prog-bar" style="width:{{ pct }}%"></div>
+    </div>
+    <div style="text-align:right;font-size:0.72rem;color:var(--gold2);margin-top:4px;">{{ "%.1f"|format(pct) }}%</div>
+  </div>
+  {% else %}
+  <div style="margin:12px 0;font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:var(--green);">
+    ${{ "{:,.0f}".format(total) }} arrecadado
+  </div>
+  {% endif %}
+
+  <!-- Contribuições -->
+  {% if meta.valores %}
+  <div style="margin-top:12px;">
+    <div style="font-family:'Oswald',sans-serif;font-size:0.7rem;letter-spacing:2px;text-transform:uppercase;color:var(--gold2);margin-bottom:8px;">Contribuições</div>
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>Membro</th>
+          <th>Valor</th>
+          <th>Obs</th>
+          <th>Data</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for v in meta.valores|sort(attribute='criado_em', reverse=True) %}
+        <tr>
+          <td>
+            <span style="color:{{ v.usuario.cargo.cor if v.usuario.cargo else '#888' }}">{{ v.usuario.nome }}</span>
+          </td>
+          <td style="font-family:'Bebas Neue',sans-serif;color:var(--green);font-size:1.1rem;">
+            ${{ "{:,.0f}".format(v.valor) }}
+          </td>
+          <td style="color:rgba(240,221,176,0.5);font-size:0.85rem;">{{ v.obs or '—' }}</td>
+          <td style="color:rgba(240,221,176,0.4);font-size:0.8rem;">{{ v.criado_em.strftime('%d/%m %H:%M') }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  <!-- Adicionar valor -->
+  {% if meta.aberta and current_user.cargo and current_user.cargo.pode_adicionar_valor %}
+  <div class="divider"></div>
+  <div style="font-family:'Oswald',sans-serif;font-size:0.7rem;letter-spacing:2px;text-transform:uppercase;color:var(--gold2);margin-bottom:10px;">Adicionar meu valor</div>
+  <form method="POST" action="{{ url_for('adicionar_valor', meta_id=meta.id) }}" style="display:flex;gap:10px;flex-wrap:wrap;">
+    <input type="number" name="valor" placeholder="$ Valor" min="1" required
+      style="background:var(--darker);border:1.5px solid var(--brown2);border-radius:8px;color:var(--cream);font-family:'Oswald',sans-serif;font-size:1rem;padding:9px 14px;outline:none;flex:1;min-width:120px;"/>
+    <input type="text" name="obs" placeholder="Observação (opcional)"
+      style="background:var(--darker);border:1.5px solid var(--brown2);border-radius:8px;color:var(--cream);font-family:'Oswald',sans-serif;font-size:1rem;padding:9px 14px;outline:none;flex:2;min-width:140px;"/>
+    <button class="btn btn-green" type="submit">➕ Adicionar</button>
+  </form>
+  {% endif %}
+</div>
+{% endfor %}
+
+<!-- MODAL CRIAR META -->
+{% if current_user.cargo and current_user.cargo.pode_gerenciar_metas %}
+<div class="modal-overlay" id="modal-criar-meta">
+  <div class="modal">
+    <div class="modal-title">🎯 Nova Meta</div>
+    <form method="POST" action="{{ url_for('criar_meta') }}">
+      <div class="form-row">
+        <label>Título *</label>
+        <input type="text" name="titulo" placeholder="Ex: Arrecadação Semanal" required/>
+      </div>
+      <div class="form-row">
+        <label>Descrição</label>
+        <textarea name="descricao" placeholder="Detalhes sobre a meta..."></textarea>
+      </div>
+      <div class="form-row">
+        <label>Valor Alvo ($) <span style="color:rgba(240,221,176,0.4)">— 0 = sem limite</span></label>
+        <input type="number" name="valor_alvo" placeholder="0" min="0"/>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:8px;">
+        <button type="submit" class="btn btn-gold">✓ Criar Meta</button>
+        <button type="button" class="btn btn-ghost" onclick="closeModal('modal-criar-meta')">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
