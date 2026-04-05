@@ -1,0 +1,150 @@
+{% extends 'base.html' %}
+{% block title %}Cargos{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>🔰 Cargos & Permissões</h1>
+  <button class="btn btn-gold" onclick="openModal('modal-criar-cargo')">+ Novo Cargo</button>
+</div>
+
+{% for c in cargos %}
+<div class="card" style="margin-bottom:14px;border-left:4px solid {{ c.cor }};">
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
+    <div>
+      <span class="badge" style="background:rgba(0,0,0,0.4);border:2px solid {{ c.cor }};color:{{ c.cor }};font-size:0.9rem;padding:5px 14px;">
+        {{ c.nome }}
+      </span>
+      <span style="color:rgba(240,221,176,0.4);font-size:0.8rem;margin-left:10px;">Nível {{ c.nivel }}</span>
+      <span style="color:rgba(240,221,176,0.3);font-size:0.78rem;margin-left:8px;">· {{ c.usuarios|length }} usuário(s)</span>
+    </div>
+    <div style="display:flex;gap:8px;">
+      {% if c.nivel < 100 %}
+      <button class="btn btn-ghost btn-sm" onclick="openEditCargo({{ c.id }}, '{{ c.nome }}', {{ c.nivel }}, '{{ c.cor }}',
+        {{ c.pode_ver_dashboard|lower }}, {{ c.pode_ver_metas|lower }}, {{ c.pode_adicionar_valor|lower }},
+        {{ c.pode_gerenciar_users|lower }}, {{ c.pode_gerenciar_metas|lower }}, {{ c.pode_gerenciar_cargos|lower }})">
+        ✏️ Editar
+      </button>
+      <form method="POST" action="{{ url_for('deletar_cargo', cid=c.id) }}"
+        onsubmit="return confirm('Deletar o cargo {{ c.nome }}? Os usuários perderão o cargo.')">
+        <button class="btn btn-red btn-sm" type="submit">🗑</button>
+      </form>
+      {% else %}
+      <span style="color:rgba(240,221,176,0.3);font-size:0.75rem;font-family:'Oswald',sans-serif;letter-spacing:1px;">PROTEGIDO</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <div style="display:flex;flex-wrap:wrap;gap:8px;">
+    {% set perms = [
+      ('pode_ver_dashboard',   'Ver Dashboard'),
+      ('pode_ver_metas',       'Ver Metas'),
+      ('pode_adicionar_valor', 'Adicionar Valor'),
+      ('pode_gerenciar_users', 'Gerenciar Usuários'),
+      ('pode_gerenciar_metas', 'Gerenciar Metas'),
+      ('pode_gerenciar_cargos','Gerenciar Cargos'),
+    ] %}
+    {% for attr, label in perms %}
+    {% if c[attr] %}
+    <span class="badge" style="background:rgba(57,217,107,0.1);border:1px solid rgba(57,217,107,0.4);color:var(--green);">✓ {{ label }}</span>
+    {% else %}
+    <span class="badge" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);color:rgba(240,221,176,0.3);">✗ {{ label }}</span>
+    {% endif %}
+    {% endfor %}
+  </div>
+</div>
+{% endfor %}
+
+<!-- MODAL CRIAR -->
+<div class="modal-overlay" id="modal-criar-cargo">
+  <div class="modal">
+    <div class="modal-title">🔰 Novo Cargo</div>
+    <form method="POST" action="{{ url_for('criar_cargo') }}">
+      <div class="grid-2" style="gap:12px;">
+        <div class="form-row">
+          <label>Nome *</label>
+          <input type="text" name="nome" placeholder="Ex: Cobrador" required/>
+        </div>
+        <div class="form-row">
+          <label>Nível (1–99)</label>
+          <input type="number" name="nivel" placeholder="10" min="1" max="99" value="10"/>
+        </div>
+      </div>
+      <div class="form-row">
+        <label>Cor do cargo</label>
+        <input type="color" name="cor" value="#f5c518" style="height:42px;cursor:pointer;"/>
+      </div>
+      <div class="form-row">
+        <label>Permissões</label>
+        <div class="perm-grid">
+          <label class="perm-item"><input type="checkbox" name="pode_ver_dashboard" checked/><span>Ver Dashboard</span></label>
+          <label class="perm-item"><input type="checkbox" name="pode_ver_metas" checked/><span>Ver Metas</span></label>
+          <label class="perm-item"><input type="checkbox" name="pode_adicionar_valor"/><span>Adicionar Valor</span></label>
+          <label class="perm-item"><input type="checkbox" name="pode_gerenciar_users"/><span>Gerenciar Usuários</span></label>
+          <label class="perm-item"><input type="checkbox" name="pode_gerenciar_metas"/><span>Gerenciar Metas</span></label>
+          <label class="perm-item"><input type="checkbox" name="pode_gerenciar_cargos"/><span>Gerenciar Cargos</span></label>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:8px;">
+        <button type="submit" class="btn btn-gold">✓ Criar</button>
+        <button type="button" class="btn btn-ghost" onclick="closeModal('modal-criar-cargo')">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL EDITAR -->
+<div class="modal-overlay" id="modal-editar-cargo">
+  <div class="modal">
+    <div class="modal-title">✏️ Editar Cargo</div>
+    <form method="POST" id="form-editar-cargo" action="">
+      <div class="grid-2" style="gap:12px;">
+        <div class="form-row">
+          <label>Nome *</label>
+          <input type="text" name="nome" id="ec-nome" required/>
+        </div>
+        <div class="form-row">
+          <label>Nível (1–99)</label>
+          <input type="number" name="nivel" id="ec-nivel" min="1" max="99"/>
+        </div>
+      </div>
+      <div class="form-row">
+        <label>Cor</label>
+        <input type="color" name="cor" id="ec-cor" style="height:42px;cursor:pointer;"/>
+      </div>
+      <div class="form-row">
+        <label>Permissões</label>
+        <div class="perm-grid">
+          <label class="perm-item"><input type="checkbox" name="pode_ver_dashboard"    id="ec-p1"/><span>Ver Dashboard</span></label>
+          <label class="perm-item"><input type="checkbox" name="pode_ver_metas"        id="ec-p2"/><span>Ver Metas</span></label>
+          <label class="perm-item"><input type="checkbox" name="pode_adicionar_valor"  id="ec-p3"/><span>Adicionar Valor</span></label>
+          <label class="perm-item"><input type="checkbox" name="pode_gerenciar_users"  id="ec-p4"/><span>Gerenciar Usuários</span></label>
+          <label class="perm-item"><input type="checkbox" name="pode_gerenciar_metas"  id="ec-p5"/><span>Gerenciar Metas</span></label>
+          <label class="perm-item"><input type="checkbox" name="pode_gerenciar_cargos" id="ec-p6"/><span>Gerenciar Cargos</span></label>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:8px;">
+        <button type="submit" class="btn btn-gold">💾 Salvar</button>
+        <button type="button" class="btn btn-ghost" onclick="closeModal('modal-editar-cargo')">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function openEditCargo(id, nome, nivel, cor, p1, p2, p3, p4, p5, p6) {
+  document.getElementById('ec-nome').value  = nome;
+  document.getElementById('ec-nivel').value = nivel;
+  document.getElementById('ec-cor').value   = cor;
+  document.getElementById('ec-p1').checked  = p1;
+  document.getElementById('ec-p2').checked  = p2;
+  document.getElementById('ec-p3').checked  = p3;
+  document.getElementById('ec-p4').checked  = p4;
+  document.getElementById('ec-p5').checked  = p5;
+  document.getElementById('ec-p6').checked  = p6;
+  document.getElementById('form-editar-cargo').action = '/cargo/' + id + '/editar';
+  openModal('modal-editar-cargo');
+}
+</script>
+{% endblock %}
