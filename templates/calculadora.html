@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+{% block title %}Calculadora{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>💰 Calculadora de Lavagem</h1>
+</div>
+
+<div style="max-width:480px;margin:0 auto;">
+  <div class="card">
+    <div class="form-row">
+      <label>💰 Dinheiro Sujo (Total)</label>
+      <div style="position:relative;">
+        <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--gold);font-family:'Oswald',sans-serif;font-size:1.1rem;pointer-events:none;">$</span>
+        <input type="number" id="valor" placeholder="0" min="0" inputmode="numeric"
+          style="padding-left:36px;font-size:1.3rem;"/>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <label>🔧 Taxa de Lavagem (%)</label>
+      <select id="taxa">
+        <option value="">— Selecione a taxa —</option>
+        <option value="5">5% — Taxa Mínima</option>
+        <option value="10">10% — Padrão</option>
+        <option value="15">15% — Alta</option>
+        <option value="20">20% — Muito Alta</option>
+        <option value="25">25% — Arriscado</option>
+        <option value="30">30% — Perigoso</option>
+        <option value="35">35% — Desesperado</option>
+        <option value="40">40% — Crítico</option>
+        <option value="50">50% — Metade</option>
+        <option value="custom">✏️ Digitar manualmente...</option>
+      </select>
+    </div>
+
+    <div class="form-row" id="campo-custom" style="display:none;">
+      <label>📝 Taxa personalizada (%)</label>
+      <div style="position:relative;">
+        <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--gold);font-family:'Oswald',sans-serif;font-size:1.1rem;pointer-events:none;">%</span>
+        <input type="number" id="taxa-custom" placeholder="Ex: 17" min="0" max="100" inputmode="numeric"
+          style="padding-left:36px;"/>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div id="result-box" style="background:var(--darker);border:2px solid var(--brown2);border-radius:12px;padding:20px;text-align:center;transition:border-color 0.3s,box-shadow 0.3s;">
+      <div style="font-family:'Oswald',sans-serif;font-size:0.72rem;letter-spacing:3px;text-transform:uppercase;color:var(--gold2);margin-bottom:10px;">💵 Dinheiro Limpo que você recebe</div>
+      <div id="result-value" style="font-family:'Bebas Neue',sans-serif;font-size:3rem;color:var(--brown2);letter-spacing:2px;min-height:48px;">$ 0</div>
+      <div id="result-detail" style="margin-top:10px;font-size:0.82rem;color:rgba(240,221,176,0.5);letter-spacing:1px;">Preencha os campos acima e clique em calcular.</div>
+    </div>
+
+    <button class="btn btn-gold" style="width:100%;margin-top:20px;font-size:1.3rem;letter-spacing:4px;padding:16px;" onclick="calcular()">⚙️ Calcular</button>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('taxa').addEventListener('change', function() {
+  document.getElementById('campo-custom').style.display = this.value === 'custom' ? 'block' : 'none';
+});
+
+function calcular() {
+  const valor = parseFloat(document.getElementById('valor').value);
+  const taxaSel = document.getElementById('taxa').value;
+  const taxaCustom = parseFloat(document.getElementById('taxa-custom').value);
+  let taxa = taxaSel === 'custom' ? taxaCustom : parseFloat(taxaSel);
+
+  const rv = document.getElementById('result-value');
+  const rd = document.getElementById('result-detail');
+  const rb = document.getElementById('result-box');
+
+  if (!valor || valor <= 0) {
+    rv.textContent = '$ 0'; rv.style.color = 'var(--brown2)';
+    rd.innerHTML = '⚠️ Digite um valor de dinheiro sujo válido.';
+    rb.style.borderColor = 'var(--brown2)'; rb.style.boxShadow = '';
+    return;
+  }
+  if (!taxa || isNaN(taxa) || taxa < 0 || taxa > 100) {
+    rv.textContent = '$ 0'; rv.style.color = 'var(--brown2)';
+    rd.innerHTML = '⚠️ Selecione ou digite uma taxa válida.';
+    rb.style.borderColor = 'var(--brown2)'; rb.style.boxShadow = '';
+    return;
+  }
+
+  const desconto = valor * (taxa / 100);
+  const limpo = valor - desconto;
+
+  rv.textContent = '$ ' + Math.floor(limpo).toLocaleString('pt-BR');
+  rv.style.color = 'var(--green)';
+  rd.innerHTML = `De <strong>$${Math.floor(valor).toLocaleString('pt-BR')}</strong> sujo → taxa de <span style="color:var(--red)">$${Math.floor(desconto).toLocaleString('pt-BR')}</span> (${taxa}%)`;
+  rb.style.borderColor = 'var(--green)';
+  rb.style.boxShadow = '0 0 20px rgba(57,217,107,0.15)';
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Enter') calcular(); });
+</script>
+{% endblock %}
